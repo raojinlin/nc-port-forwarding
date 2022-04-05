@@ -1,0 +1,28 @@
+#!/bin/bash
+
+RECV_PORT=$1
+LISTEN_PORT=$2
+
+RECV_CHNNEL=/tmp/npfs_chnnel
+
+
+if [ ! -e $RECV_CHNNEL ]; then
+    mkfifo $RECV_CHNNEL
+fi
+
+
+if [[ -z "$RECV_PORT" || -z "$LISTEN_PORT" ]]; then
+    echo "Usage: $0 RECEV_PORT LISTEN_PORT"
+    echo
+    echo "Example: listen port 4444 to receive connection from client and forwarding to local 2222 port"
+    echo "=>     $0 4444 2222"
+    exit 1
+fi
+
+echo "receive port => $RECV_PORT"
+echo "listen port => $LISTEN_PORT"
+
+echo "Running"
+nc -vlk $RECV_PORT < $RECV_CHNNEL | nc -vlk $LISTEN_PORT > $RECV_CHNNEL
+
+echo Bey

@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -m
+
+FIFO_FILE=/tmp/npf
+LOCAL_HOST=$1
+REMOTE_HOST=$2
+
+
+LOCAL_ADDR=`awk -F: '{print $1}' <<< "$LOCAL_HOST"`
+LOCAL_PORT=`awk -F: '{print $2}' <<< "$LOCAL_HOST"`
+REMOTE_ADDR=`awk -F: '{print $1}' <<< "$REMOTE_HOST"`
+REMOTE_PORT=`awk -F: '{print $2}' <<< "$REMOTE_HOST"`
+
+
+if [[ -z "$LOCAL_ADDR" || -z "$LOCAL_PORT" || -z "$REMOTE_ADDR" || -z "$REMOTE_PORT" ]]; then
+    echo "Usage: $0 LOCAL_ADDR:LOCAL_PORT REMOTE_ADDR:REMOTE_PORT"
+    echo
+    echo "Example: forward local 127.0.0.1:22 to remote 192.168.1.1:2222"
+    echo "=>     $0 127.0.0.1:22 192.168.1.1:2222"
+    exit 1
+fi
+
+
+if [[ ! -e $FIFO_FILE ]]; then
+    mkfifo $FIFO_FILE
+fi
+
+echo "Forwarding local $LOCAL_HOST to remote $REMOTE_HOST"
+
+error() {
+    echo -e "\033[33mError\033[0m $1"
+}
+
+detect() {
+    if ! nc -v -w 1 $1 $2; then
+        exit 1
+    fi
+}
+
+run() {
+    detect $REMOTE_ADDR $REMOTE_PORT
+    detect $LOCAL_ADDR $LOCAL_PORT
+
+    echo "Running..."
+    nc $REMOTE_ADDR $REMOTE_PORT < $FIFO_FILE | nc $LOCAL_ADDR $LOCAL_PORT > $FIFO_FILE
+}
+
+run
+echo "Bey."
